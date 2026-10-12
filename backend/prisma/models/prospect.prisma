@@ -1,0 +1,164 @@
+enum ProspectStage {
+  REQUIREMENT
+  FOLLOW_UP
+  DEMO
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum ProspectActivityType {
+  CONVERSION
+  STAGE_CHANGE
+  CALL
+  MEETING
+  EMAIL
+  FOLLOW_UP_SET
+  QUOTATION_CREATED
+  QUOTATION_UPDATED
+  IN_PERSON_MEETING
+  VIRTUAL_MEETING
+  TEXT
+  WHATSAPP
+  NOTE
+  SITE_VISIT
+  FOLLOW_UP_RESCHEDULED
+  FOLLOW_UP_CANCELLED
+}
+
+enum ProspectFollowUpType {
+  IN_PERSON_MEETING
+  VIRTUAL_MEETING
+  CALL
+  EMAIL
+  TEXT
+  WHATSAPP
+  MEETING
+  SITE_VISIT
+}
+
+enum ProspectReminder {
+  MINUTES_15
+  MINUTES_30
+  HOUR_1
+  DAY_1
+}
+
+model Prospect {
+  id String @id @default(uuid())
+
+  prospectNo String
+
+  leadId String? @unique
+  /// Restrict is explicit on purpose. leadId is optional, and Prisma's default
+  /// onDelete for an optional relation is SetNull — which would let a hard
+  /// delete of a Lead silently orphan its Prospect. The database has always
+  /// enforced RESTRICT (20260619105412_init); stating it here keeps the schema
+  /// and the database in agreement so `migrate dev` generates nothing.
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: Restrict)
+
+  stage ProspectStage @default(REQUIREMENT)
+
+  expectedValue Float?
+  closeDate     DateTime?
+
+  /// When the prospect reached WON or LOST. Set once by the stage change (a
+  /// closed prospect cannot change stage again); activities dated after it
+  /// are refused.
+  closedAt DateTime?
+
+  notes String?
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedProspects", fields: [assignedToId], references: [id])
+
+  deletedAt   DateTime?
+  deletedById String?
+  deletedBy   User?     @relation("ProspectDeleter", fields: [deletedById], references: [id])
+
+  activities ProspectActivity[]
+  quotations Quotation[]
+  followUps  FollowUp[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, prospectNo])
+  @@index([prospectNo])
+  @@index([stage])
+  @@index([assignedToId])
+  @@index([organizationId])
+  @@index([deletedAt])
+}
+
+/// Deprecated: only ProspectActivity.followUpHealth uses it, and nothing writes
+/// that column. Both are dropped by the contract migration.
+enum FollowUpHealth {
+  DONE
+  OK
+  WARNING
+  OVERDUE
+  NONE
+}
+
+model ProspectActivity {
+  id String @id @default(uuid())
+
+  prospectId String
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  type     ProspectActivityType
+  title    String
+  summary  String
+  details  String?
+  metadata Json?
+
+  /// Outcome of an interaction (call, meeting, …). NULL for system events.
+  outcome FollowUpOutcome?
+
+  /// The follow-up this row completed (interactions) or describes (follow-up events).
+  followUpId String?
+  followUp   FollowUp? @relation(fields: [followUpId], references: [id], onDelete: SetNull)
+
+  /// Deprecated: never written. Dropped by the contract migration.
+  followUpHealth FollowUpHealth?
+
+  /// When it happened. createdAt is when it was logged; a large gap between the
+  /// two is shown as "logged late".
+  occurredAt DateTime @default(now())
+
+  /// Client-generated id so a retried POST returns the original row instead of
+  /// creating a duplicate.
+  clientRequestId String?
+
+  createdById String?
+  createdBy   User?   @relation("ProspectActivities", fields: [createdById], references: [id])
+
+  updatedById String?
+  updatedBy   User?   @relation("ProspectActivityUpdater", fields: [updatedById], references: [id])
+
+  deletedAt   DateTime?
+  deletedById String?
+  deletedBy   User?     @relation("ProspectActivityDeleter", fields: [deletedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([prospectId, clientRequestId])
+  @@index([prospectId, createdAt(sort: Desc)])
+  @@index([prospectId, occurredAt(sort: Desc)])
+  @@index([followUpId])
+  @@index([createdById])
+}
+
+model ProspectSequence {
+  organizationId String   @id
+  lastSequence   Int      @default(0)
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,64 @@
+export const PROSPECT_STAGE_VALUES = [
+  "REQUIREMENT",
+  "FOLLOW_UP",
+  "DEMO",
+  "PROPOSAL",
+  "NEGOTIATION",
+  "WON",
+  "LOST",
+] as const;
+
+export const PROSPECT_STATUS_VALUES = ["ACTIVE", "WON", "LOST"] as const;
+
+export const PROSPECT_FOLLOW_UP_TYPE_VALUES = [
+  "IN_PERSON_MEETING",
+  "VIRTUAL_MEETING",
+  "CALL",
+  "EMAIL",
+  "TEXT",
+  "WHATSAPP",
+  "MEETING",
+  "SITE_VISIT",
+] as const;
+
+export const PROSPECT_REMINDER_VALUES = [
+  "MINUTES_15",
+  "MINUTES_30",
+  "HOUR_1",
+  "DAY_1",
+] as const;
+
+export const FOLLOW_UP_STATUS_VALUES = [
+  "PENDING",
+  "COMPLETED",
+  "MISSED",
+  "CANCELLED",
+  "RESCHEDULED",
+] as const;
+
+export const FOLLOW_UP_OUTCOME_VALUES = [
+  "SUCCESSFUL",
+  "NO_RESPONSE",
+  "NOT_INTERESTED",
+  "RESCHEDULED",
+  "OTHER",
+] as const;
+
+export const PROSPECT_ACTIVITY_TYPE_VALUES = [
+  "CONVERSION",
+  "STAGE_CHANGE",
+  "IN_PERSON_MEETING",
+  "VIRTUAL_MEETING",
+  "CALL",
+  "EMAIL",
+  "TEXT",
+  "WHATSAPP",
+  "MEETING",
+  "FOLLOW_UP_SET",
+  "QUOTATION_CREATED",
+  "QUOTATION_UPDATED",
+  "NOTE",
+  "SITE_VISIT",
+  "FOLLOW_UP_RESCHEDULED",
+  "FOLLOW_UP_CANCELLED",
+] as const;

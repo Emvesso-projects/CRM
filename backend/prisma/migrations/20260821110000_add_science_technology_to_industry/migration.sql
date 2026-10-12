@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "Industry" ADD VALUE 'SCIENCE_TECHNOLOGY';

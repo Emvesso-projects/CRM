@@ -1,0 +1,81 @@
+model RefreshToken {
+  id                  String    @id @default(uuid())
+  token               String    @unique
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt           DateTime
+  userAgent           String?
+  ip                  String?
+  replacedAt          DateTime? // Tracks when this token was rotated
+  isUsedAfterRotation Boolean   @default(false) // For replay attack detection
+  createdAt           DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// A signup that has been started but not yet proven.
+///
+/// Holds the whole signup payload until the emailed code comes back, so the
+/// Organization, User and Subscription are only created once the address is
+/// confirmed. Nothing in the system is ever in an unverified state — which is
+/// why there is no verification banner and no middleware gating writes on it.
+///
+/// Deliberately SIMPLER than PasswordResetOtp: no userId (there is no user
+/// yet), and no usedAt/revokedAt. The row is DELETED when consumed and deleted
+/// when superseded, because it carries a password hash and there is no history
+/// here worth keeping. Single-use is enforced by a conditional deleteMany whose
+/// count the caller checks — the same guarantee markPasswordResetOtpUsed gets
+/// from a conditional updateMany.
+///
+/// `email @unique` means one pending signup per address: asking for a new code
+/// deletes the previous row rather than leaving two live ones.
+///
+/// The organization's details are typed columns rather than a JSON blob: they
+/// come back fully typed on verify, with nothing to re-validate. Optional ones
+/// are NULL when left blank; verifySignup fills orgEmail and authorizedPerson
+/// from the admin account.
+model PendingSignup {
+  id                 String   @id @default(uuid())
+  email              String   @unique
+  firstName          String
+  lastName           String
+  mobile             String
+  companyName        String
+  orgType            String
+  orgMobile          String
+  address            String
+  orgEmail           String?
+  authorizedPerson   String?
+  dateOfRegistration DateTime?
+  gstin              String?
+  remark             String?
+  passwordHash       String
+  otpHash            String   @unique
+  expiresAt          DateTime
+  failedAttempts     Int      @default(0)
+  requestedIp        String?
+  requestedUserAgent String?
+  createdAt          DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model PasswordResetOtp {
+  id                 String    @id @default(uuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  otpHash            String    @unique
+  expiresAt          DateTime
+  usedAt             DateTime?
+  revokedAt          DateTime?
+  failedAttempts     Int       @default(0)
+  requestedIp        String?
+  requestedUserAgent String?
+  consumedIp         String?
+  consumedUserAgent  String?
+  createdAt          DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+

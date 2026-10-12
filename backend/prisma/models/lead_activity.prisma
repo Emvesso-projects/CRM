@@ -1,0 +1,52 @@
+enum LeadActivityType {
+  STATUS_CHANGE
+  CALL
+  EMAIL
+  WHATSAPP
+  MEETING
+  SITE_VISIT
+  NOTE
+  IN_PERSON_MEETING
+  VIRTUAL_MEETING
+  TEXT
+}
+
+model LeadActivity {
+  id String @id @default(uuid())
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  type    LeadActivityType
+  remark  String              // What happened — mandatory, max 500 chars
+
+  // Only populated for STATUS_CHANGE activities
+  previousStatus String?      // e.g. "NEW"
+  newStatus      String?      // e.g. "ATTEMPTED_CONTACT"
+
+  /// When it happened. createdAt is when it was logged; a large gap between the
+  /// two is shown as "logged late".
+  occurredAt DateTime @default(now())
+
+  /// Client-generated id so a retried POST returns the original row instead of
+  /// creating a duplicate.
+  clientRequestId String?
+
+  createdById String
+  createdBy   User   @relation("LeadActivityCreator", fields: [createdById], references: [id])
+
+  updatedById String?
+  updatedBy   User?  @relation("LeadActivityUpdater", fields: [updatedById], references: [id])
+
+  deletedAt   DateTime?
+  deletedById String?
+  deletedBy   User?     @relation("LeadActivityDeleter", fields: [deletedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([leadId, clientRequestId])
+  @@index([leadId, createdAt(sort: Desc)])
+  @@index([leadId, occurredAt(sort: Desc)])
+  @@index([createdById])
+}

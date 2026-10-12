@@ -1,0 +1,71 @@
+enum FollowUpStatus {
+  PENDING
+  COMPLETED
+  MISSED
+  CANCELLED
+  RESCHEDULED
+}
+
+enum FollowUpOutcome {
+  SUCCESSFUL
+  NO_RESPONSE
+  NOT_INTERESTED
+  RESCHEDULED
+  OTHER
+}
+
+model FollowUp {
+  id String @id @default(uuid())
+
+  prospectId String
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  scheduledDate DateTime
+  scheduledTime String?
+  /// The instant the follow-up is due: scheduledDate + scheduledTime read in
+  /// APP_TIMEZONE. Overdue and due-today logic compares against this, never
+  /// against the two fields above. Nullable only until the contract migration.
+  dueAt         DateTime?
+  type          ProspectFollowUpType
+  notes         String?
+  reminder      ProspectReminder?
+
+  assignedToId String?
+  assignedTo   User? @relation("FollowUpAssignee", fields: [assignedToId], references: [id])
+
+  status FollowUpStatus @default(PENDING)
+
+  completedAt       DateTime?
+  completedById     String?
+  completedBy       User? @relation("FollowUpCompleter", fields: [completedById], references: [id])
+  outcome           FollowUpOutcome?
+  completionRemark  String?
+
+  /// Deprecated: copied into statusReason. Dropped by the contract migration.
+  missedReason String?
+  /// Why the follow-up was cancelled, rescheduled or missed.
+  statusReason String?
+
+  rescheduledToId String?    @unique
+  rescheduledTo   FollowUp?  @relation("RescheduleChain", fields: [rescheduledToId], references: [id])
+  rescheduledFrom FollowUp?  @relation("RescheduleChain")
+
+  activities ProspectActivity[]
+
+  createdById String?
+  createdBy   User? @relation("FollowUpCreator", fields: [createdById], references: [id])
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([prospectId, status])
+  @@index([assignedToId, status, scheduledDate])
+  @@index([organizationId, status, scheduledDate])
+  @@index([scheduledDate])
+  @@index([assignedToId, status, dueAt])
+  @@index([organizationId, status, dueAt])
+  @@index([dueAt])
+}
